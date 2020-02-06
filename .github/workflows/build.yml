@@ -10,24 +10,47 @@ jobs:
     env:
       CONTAINER: debian:stable
     strategy:
-      matrix:
+      matrix: &linux-matrix
         arch: ['amd64', 'i386', 'arm32v7', 'arm64v8']
     steps:
-      - name: Check Out
+      - &check-out
+        name: Check Out
         uses: actions/checkout@v1
-      - name: Prepare Docker
+      - &prep-linux-docker
+        name: Prepare Docker
         run: |
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
           docker pull ${{ matrix.arch }}/${CONTAINER}
-      - name: Build
+      - &build-linux
+        name: Build
         run: |
           docker run -e arch=${{ matrix.arch }} -e tag=${{ github.event.release.tag_name }} -v $PWD:/build ${{ matrix.arch }}/${CONTAINER} /build/.github/build-linux.sh
-      - name: Upload
+      - &upload
+        name: Upload
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           asset_path: ./libmosquitto-${{ github.event.release.tag_name }}-linux-${{ matrix.arch }}.tar.gz
           asset_name: libmosquitto-${{ github.event.release.tag_name }}-linux-${{ matrix.arch }}.tar.gz
+          asset_content_type: application/gzip
+          upload_url: ${{ github.event.release.upload_url }}
+
+  build-linux-musl:
+    name: Build Linux MUSL
+    runs-on: ubuntu-latest
+    env:
+      CONTAINER: alpine:latest
+    strategy:
+      matrix:
+        <<: *linux-matrix
+    steps:
+      - <<: *check-out
+      - <<: *prep-linux-docker
+      - <<: *build-linux
+      - <<: *upload
+        with:
+          asset_path: ./libmosquitto-${{ github.event.release.tag_name }}-linux-${{ matrix.arch }}.tar.gz
+          asset_name: libmosquitto-${{ github.event.release.tag_name }}-linux-musl-${{ matrix.arch }}.tar.gz
           asset_content_type: application/gzip
           upload_url: ${{ github.event.release.upload_url }}
