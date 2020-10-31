@@ -24,6 +24,10 @@ Contributors:
 #include <strings.h>
 #endif
 
+#if defined(__APPLE__)
+#  include <mach/mach_time.h>
+#endif
+
 #include "mosquitto.h"
 #include "mosquitto_internal.h"
 #include "memory_mosq.h"
